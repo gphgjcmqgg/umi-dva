@@ -8,7 +8,9 @@ const config: IConfig =  {
       path: '/',
       component: '../layouts/index',
       routes: [
-        { path: '/', component: '../pages/index' }
+        { path: '/', component: '../pages/index' },
+        { path: '/users', component: '../pages/users/index' },
+        { path: '/users/list', component: '../pages/users/list' }
       ]
     }
   ],
@@ -20,7 +22,7 @@ const config: IConfig =  {
       dynamicImport: false,
       title: 'umi-dva',
       dll: false,
-      
+
       routes: {
         exclude: [
           /models\//,
