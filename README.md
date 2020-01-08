@@ -308,3 +308,38 @@ umi 允许在 .umirc.js 或 config/config.js （二选一，.umirc.js 优先）�
 
 ## 介绍 Umi UI
 
+* 项目管理。集中式管理本地项目。
+* 配置管理。umi / bigfish 常用项目配置。
+* 任务管理。集成启动、构建、测试、代码规范检查、重新安装依赖等常用操作。
+
+## ------------------------------------------------------------------
+
+## Mock 数据
+
+Mock 数据是前端开发过程中必不可少的一环，是分离前后端开发的关键链路。通过预先跟服务器端约定好的接口，模拟请求数据甚至逻辑，能够让前端开发独立自主，不会被服务端的开发所阻塞。
+
+### 使用 umi 的 mock 功能
+
+umi 里约定 mock 文件夹下的文件或者 page(s) 文件夹下的 _mock 文件即 mock 文件，文件导出接口定义，支持基于 require 动态分析的实时刷新，支持 ES6 语法，以及友好的出错提示，详情参看 mock-data。
+export default {
+  // 支持值为 Object 和 Array
+  'GET /api/users': { users: [1, 2] },
+
+  // GET POST 可省略
+  '/api/users/1': { id: 1 },
+
+  // 支持自定义函数，API 参考 express@4
+  'POST /api/users/create': (req, res) => { res.end('OK'); },
+};
+当客户端（浏览器）发送请求，如：GET /api/users，那么本地启动的 umi dev 会跟此配置文件匹配请求路径以及方法，如果匹配到了，就会将请求通过配置处理，就可以像样例一样，你可以直接返回数据，也可以通过函数处理以及重定向到另一个服务器。
+
+比如定义如下映射规则：
+'GET /api/currentUser': {
+  name: 'momo.zxy',
+  avatar: imgMap.user,
+  userid: '00000001',
+  notifyCount: 12,
+},
+
+
+
