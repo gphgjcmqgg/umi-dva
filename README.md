@@ -341,5 +341,215 @@ export default {
   notifyCount: 12,
 },
 
+### 引入 Mock.js
 
+Mock.js 是常用的辅助生成模拟数据的第三方库，当然你可以用你喜欢的任意库来结合 roadhog 构建数据模拟功能。
+
+import mockjs from 'mockjs';
+
+export default {
+  // 使用 mockjs 等三方库
+  'GET /api/tags': mockjs.mock({
+    'list|100': [{ name: '@city', 'value|1-100': 50, 'type|0-2': 1 }],
+  }),
+};
+
+### 添加跨域请求头
+
+设置 response 的请求头即可：
+'POST /api/users/create': (req, res) => {
+  ...
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  ...
+},
+
+### 如何模拟延迟
+
+为了更加真实的模拟网络数据请求，往往需要模拟网络延迟时间。
+
+#### 手动添加 setTimeout 模拟延迟
+
+'POST /api/forms': (req, res) => {
+  setTimeout(() => {
+    res.send('Ok');
+  }, 1000);
+},
+
+#### 使用插件模拟延迟
+
+import { delay } from 'roadhog-api-doc';
+
+const proxy = {
+  'GET /api/project/notice': getNotice,
+  'GET /api/activities': getActivities,
+  'GET /api/rule': getRule,
+  'GET /api/tags': mockjs.mock({
+    'list|100': [{ name: '@city', 'value|1-100': 50, 'type|0-2': 1 }]
+  }),
+  'GET /api/fake_list': getFakeList,
+  'GET /api/fake_chart_data': getFakeChartData,
+  'GET /api/profile/basic': getProfileBasicData,
+  'GET /api/profile/advanced': getProfileAdvancedData,
+  'POST /api/register': (req, res) => {
+    res.send({ status: 'ok' });
+  },
+  'GET /api/notices': getNotices,
+};
+
+// 调用 delay 函数，统一处理
+export default delay(proxy, 1000);
+
+### 动态 Mock 数据
+
+如果你需要动态生成 Mock 数据，你应该通过函数进行处理，
+
+// 静态的
+'/api/random': Mock.mock({
+  // 只随机一次
+  'number|1-100': 100,
+}),
+
+// 动态的
+'/api/random': (req, res) => {
+  res.send(Mock.mock({
+    // 每次请求均产生随机值
+    'number|1-100': 100,
+  }))
+},
+
+## Use umi with dva
+
+自>= umi@2起，dva的整合可以直接通过 umi-plugin-react 来配置。
+
+* 按目录约定注册 model，无需手动 app.model
+* 文件名即 namespace，可以省去 model 导出的 namespace key
+* 无需手写 router.js，交给 umi 处理，支持 model 和 component 的按需加载
+* 内置 query-string 处理，无需再手动解码和编码
+* 内置 dva-loading 和 dva-immer，其中 dva-immer 需通过配置开启
+* 开箱即用，无需安装额外依赖，比如 dva、dva-loading、dva-immer、path-to-regexp、object-assign、react、react-dom 等
+
+## 使用 umi dva
+
+用 yarn 安装依赖
+yarn add umi-plugin-react
+
+然后在 .umirc.js 里配置插件：
+export default {
+  plugins: [
+    [
+      'umi-plugin-react',
+      {
+        dva: true,
+      },
+    ]
+  ],
+};
+推荐开启 dva-immer 以简化 reducer 编写，
+export default {
+  plugins: [
+    [
+      'umi-plugin-react',
+      {
+        dva: {
+          immer: true
+        }
+      }
+    ],
+  ],
+};
+
+### model 注册
+
+model 分两类，一是全局 model，二是页面 model。全局 model 存于 /src/models/ 目录，所有页面都可引用；页面 model 不能被其他页面所引用。
+规则如下：
+
+* src/models/**/*.js 为 global model
+* src/pages/**/models/**/*.js 为 page model
+* global model 全量载入，page model 在 production 时按需载入，在 development 时全量载入
+* page model 为 page js 所在路径下 models/**/*.js 的文件
+* page model 会向上查找，比如 page js 为 pages/a/b.js，他的 page model 为 pages/a/b/models/**/*.js + pages/a/models/**/*.js，依次类推
+* 约定 model.js 为单文件 model，解决只有一个 model 时不需要建 models 目录的问题，有 model.js 则不去找 models/**/*.js
+
+### 配置及插件
+
+在 src 目录下新建 app.js，内容如下：
+export const dva = {
+  config: {
+    onError(e) {
+      e.preventDefault();
+      console.error(e.message);
+    },
+  },
+  plugins: [
+    require('dva-logger')(),
+  ],
+};
+
+### url 变化了，但页面组件不刷新，是什么原因？
+
+layouts/index.js 里如果用了 connect 传数据，需要用 umi/withRouter 高阶一下。
+import withRouter from 'umi/withRouter';
+export default withRouter(connect(mapStateToProps)(LayoutComponent));
+
+### 如何禁用包括 component 和 models 的按需加载？
+
+在 .umirc.js 里配置：
+export default {
+  plugins: [
+    [
+      'umi-plugin-react',
+      {
+        dva: {
+          dynamicImport: undefined // 配置在dva里
+        },
+        dynamicImport: undefined   // 或者直接写在react插件的根配置，写在这里也会被继承到上面的dva配置里
+      }
+    ],
+  ],
+};
+
+### 全局 layout 使用 connect 后路由切换后没有刷新？
+
+需用 withRouter 包一下导出的 react 组件，注意顺序。
+import withRouter from 'umi/withRouter';
+export default withRouter(connect()(Layout));
+
+## 按需加载
+
+出于性能的考虑，我们会对模块和组件进行按需加载。
+
+### 按需加载组件
+
+通过 umi/dynamic 接口实现，比如：
+import dynamic from 'umi/dynamic';
+
+const delay = (timeout) => new Promise(resolve => setTimeout(resolve, timeout));
+const App = dynamic({
+  loader: async function() {
+    await delay(/* 1s */1000);
+    return () => <div>I will render after 1s</div>;
+  },
+});
+
+### 按需加载模块
+
+通过 import() 实现，比如：
+import('g2').then(() => {
+  // do something with g2
+});
+
+## 运行时配置
+
+我们通过 .umirc.js 做编译时的配置，这能覆盖大量场景，但有一些却是编译时很难触及的。
+比如：
+
+* 在出错时显示个 message 提示用户
+* 在加载和路由切换时显示个 loading
+* 页面载入完成时请求后端，根据响应动态修改路由
+
+### 配置方式
+
+umi 约定 src 目录下的 app.js 为运行时的配置文件。
+
+### 配置列表
 
